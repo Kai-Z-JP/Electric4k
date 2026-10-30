@@ -1,0 +1,7 @@
+{
+  "repository": "https://github.com/electric-sql/electric",
+  "commit": "3f9809fb0bd894cb74470d434749673492ad7acf",
+  "package": "@electric-sql/client",
+  "version": "1.5.28",
+  "scope": "Kotlin equivalents of the client public API, Shape HTTP protocol and observable synchronization semantics"
+}

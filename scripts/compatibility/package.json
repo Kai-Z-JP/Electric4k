@@ -1,0 +1,15 @@
+{
+  "name": "electric4k-compat",
+  "version": "1.0.0",
+  "description": "Pinned upstream oracle for Electric4k compatibility tests",
+  "scripts": {
+    "generate": "node generate.mjs"
+  },
+  "license": "Apache-2.0",
+  "type": "commonjs",
+  "dependencies": {
+    "@electric-sql/client": "1.5.28",
+    "esbuild": "0.25.12"
+  },
+  "private": true
+}

@@ -1,0 +1,166 @@
+name: Kotlin Multiplatform
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  jvm:
+    name: JVM / ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, windows-2025, macos-15, macos-15-intel]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-build
+      - name: Verify JVM
+        shell: bash
+        run: ./gradlew --no-daemon --max-workers=2 jvmTest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jvm-${{ matrix.runner }}-reports
+          path: |
+            build/reports/
+            build/test-results/
+  js-node:
+    name: JS / Node.js
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-build
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify JS / Node.js
+        run: ./gradlew --no-daemon --max-workers=2 -Pelectric4k.systemNode=true jsNodeTest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: js-node-reports
+          path: |
+            build/reports/
+            build/test-results/
+  js-browser:
+    name: JS / Chrome
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-build
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Locate Chrome
+        run: echo "CHROME_BIN=$(command -v google-chrome)" >> "$GITHUB_ENV"
+      - name: Verify JS / Chrome
+        run: ./gradlew --no-daemon --max-workers=2 -Pelectric4k.systemNode=true jsBrowserTest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: js-browser-reports
+          path: |
+            build/reports/
+            build/test-results/
+  wasm-browser:
+    name: Wasm / Chrome
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-build
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Locate Chrome
+        run: echo "CHROME_BIN=$(command -v google-chrome)" >> "$GITHUB_ENV"
+      - name: Verify Wasm / Chrome
+        run: ./gradlew --no-daemon --max-workers=2 -Pelectric4k.systemNode=true wasmJsBrowserTest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: wasm-browser-reports
+          path: |
+            build/reports/
+            build/test-results/
+  android:
+    name: Android / unit tests and AAR
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-build
+      - name: Verify Android / unit tests and AAR
+        run: ./gradlew --no-daemon --max-workers=2 testDebugUnitTest assembleRelease
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-reports
+          path: |
+            build/reports/
+            build/test-results/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-release-aar
+          path: build/outputs/aar/*-release.aar
+          if-no-files-found: error
+  integration:
+    name: Electric / integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-build
+      - name: Verify Electric / integration
+        run: ./scripts/integration.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-reports
+          path: |
+            build/reports/
+            build/test-results/
+  ios:
+    name: iOS / ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: simulator-arm64
+            runner: macos-15
+            tasks: iosSimulatorArm64Test linkReleaseFrameworkIosSimulatorArm64
+          - target: simulator-x64
+            runner: macos-15-intel
+            tasks: iosX64Test linkReleaseFrameworkIosX64
+          - target: device-arm64
+            runner: macos-15
+            tasks: linkReleaseFrameworkIosArm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-build
+      - name: Show Apple toolchain
+        run: |
+          uname -m
+          xcodebuild -version
+          xcrun simctl list devices available
+      - name: Verify ${{ matrix.target }}
+        run: ./gradlew --no-daemon --max-workers=2 ${{ matrix.tasks }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-${{ matrix.target }}-reports
+          path: |
+            build/reports/
+            build/test-results/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-${{ matrix.target }}-framework
+          path: build/bin/ios*/releaseFramework/
+          if-no-files-found: error

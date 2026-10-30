@@ -1,0 +1,9 @@
+.gradle/
+build/
+.kotlin/
+.idea/
+*.iml
+
+local.properties
+
+scripts/compatibility/node_modules/
